@@ -1,0 +1,19 @@
+services:
+  craved:
+    build: .
+    image: craved:latest
+    container_name: craved
+    ports:
+      - "8090:8090"
+    # The ALSA sequencer is kernel-global: passing /dev/snd lets the container
+    # see and connect to host USB-MIDI clients (e.g. "BEHRINGER CRAVE").
+    # The container runs as root, which has access to the audio-group devices.
+    devices:
+      - "/dev/snd:/dev/snd"
+    volumes:
+      - ./data:/data
+      # live-mount the web UI so frontend tweaks don't need an image rebuild
+      - ./web:/app/web:ro
+    environment:
+      - RUST_LOG=info
+    restart: unless-stopped

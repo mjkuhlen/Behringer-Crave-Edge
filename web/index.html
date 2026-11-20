@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>craved — Behringer Crave companion</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">CRAVED<span class="sub">crave companion · linux</span></div>
+  <div class="device-bar">
+    <select id="device-select" title="MIDI device"></select>
+    <button id="btn-connect" class="primary">Connect</button>
+    <button id="btn-refresh-devices" title="Rescan ALSA ports">⟳</button>
+    <span id="conn-status" class="status off">disconnected</span>
+  </div>
+  <div class="transport">
+    <button id="btn-play" class="play">▶</button>
+    <button id="btn-stop" class="stop">■</button>
+    <label>BPM <input id="tempo" type="number" min="20" max="300" value="120"></label>
+  </div>
+</header>
+
+<div id="device-strip" class="device-strip"></div>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="sequencer">Sequencer</button>
+  <button class="tab" data-tab="settings">Device Settings</button>
+  <button class="tab" data-tab="library">Library</button>
+  <button class="tab" data-tab="song">Song</button>
+  <button class="tab" data-tab="modulation">Modulation</button>
+  <button class="tab" data-tab="live">Live Keys</button>
+  <button class="tab" data-tab="monitor">MIDI Monitor</button>
+</nav>
+
+<main>
+<!-- ================= SEQUENCER ================= -->
+<section id="tab-sequencer" class="tab-panel active">
+  <p id="edge-notice" class="hint" hidden><strong>Edge selected.</strong> The Edge's dual sequencer has no
+  documented SysEx — pattern dump/write is Crave-only. To play the Edge from the app:
+  <strong>①</strong> rear MIDI CHANNEL DIP switches — all four DOWN = channel 1 (legend printed on the case);
+  match App MIDI channel in Device Settings. <strong>②</strong> For clean note playback, STOP the internal
+  sequencer and set <strong>SEQ PITCH MOD = OFF</strong> (middle), then tune with the FREQUENCY knobs —
+  otherwise the step pitch knobs fight the incoming notes. <strong>③</strong> To run the Edge's own
+  sequencer instead: CLOCK switch = USB/MIDI, enable <strong>⏱ clock mode</strong> on the device chip and press ▶
+  (the Edge starts on incoming clock). MIDI velocity appears at the VELOCITY CV jack (patch it to VCF MOD for
+  velocity-driven filter movement). No MIDI swing, no MIDI sequence reset — those are panel-only.</p>
+  <div class="pattern-bar">
+    <input id="pattern-name" type="text" value="Untitled" spellcheck="false">
+    <label>Length <select id="pattern-length"></select></label>
+    <label>Swing <input id="swing" type="range" min="0" max="75" value="0"><span id="swing-val">0%</span></label>
+    <label>Gate <input id="gate-length" type="range" min="10" max="100" value="50"><span id="gate-val">50%</span></label>
+    <label title="Retriggers per step (all steps). On the device: SHIFT + GLIDE during playback — not saved in device patterns.">Ratchet <select id="ratchet"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label>
+    <button id="btn-new">New</button>
+    <button id="btn-save" class="primary">Save</button>
+    <span id="save-status" class="hint"></span>
+  </div>
+
+  <div id="step-grid" class="step-grid"></div>
+
+  <div class="step-editor">
+    <div class="step-editor-head">Step <span id="sel-step-num">1</span></div>
+    <div class="step-editor-row">
+      <div id="mini-keys" class="mini-keys"></div>
+      <label>Note <input id="step-note" type="number" min="0" max="127" value="36"><span id="step-note-name">C2</span></label>
+    </div>
+    <div class="step-editor-row">
+      <label class="toggle"><input id="step-rest" type="checkbox"> Rest</label>
+      <label class="toggle"><input id="step-accent" type="checkbox"> Accent</label>
+      <label class="toggle"><input id="step-glide" type="checkbox"> Glide</label>
+      <label>Vel <input id="step-velocity" type="range" min="1" max="127" value="100"><span id="step-vel-val">100</span></label>
+      <label>Gate <input id="step-gate" type="range" min="1" max="100" value="50"><span id="step-gate-val">50%</span></label>
+    </div>
+  </div>
+
+  <div class="device-slot-bar">
+    <strong>Device slot</strong>
+    <label>Bank <select id="dump-bank"></select></label>
+    <label>Pattern <select id="dump-pattern"></select></label>
+    <button id="btn-dump">Dump from device</button>
+    <button id="btn-write-device" class="danger">Write to device…</button>
+    <span class="hint">wire format hardware-verified — raw SysEx always preserved</span>
+  </div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section id="tab-settings" class="tab-panel">
+  <div class="settings-grid">
+    <label class="crave-only">Clock source <select id="set-clock-source"></select></label>
+    <label class="crave-only">Clock type (PPQN) <select id="set-clock-type"></select></label>
+    <label class="crave-only">Clock edge <select id="set-clock-edge"></select></label>
+    <label class="crave-only">ASSIGN output mode <select id="set-assign-mode"></select></label>
+    <label class="crave-only">Accent threshold <input id="set-accent" type="range" min="0" max="126" value="100"><span id="set-accent-val">100</span></label>
+    <label class="crave-only">Pitch bend down <input id="set-bend-down" type="number" min="0" max="24" value="2"></label>
+    <label class="crave-only">Pitch bend up <input id="set-bend-up" type="number" min="0" max="24" value="2"></label>
+    <label class="crave-only toggle"><input id="set-autoplay" type="checkbox"> Sequencer auto-play</label>
+    <label class="crave-only toggle"><input id="set-clock-out" type="checkbox"> MIDI clock out (OUT/THRU)</label>
+    <label class="edge-only" hidden>Pitch bend range <input id="set-edge-bend" type="number" min="0" max="12" value="12"></label>
+    <label class="edge-only" hidden>Key priority <select id="set-edge-keypri"></select></label>
+    <label class="edge-only toggle" hidden><input id="set-edge-m2u" type="checkbox"> MIDI DIN → USB</label>
+    <label class="edge-only toggle" hidden><input id="set-edge-mst" type="checkbox"> MIDI DIN → DIN thru</label>
+    <label class="edge-only toggle" hidden><input id="set-edge-u2m" type="checkbox"> USB → MIDI DIN out</label>
+    <label>App MIDI channel <input id="set-channel" type="number" min="1" max="16" value="1"><span class="hint">must match the rear-panel MIDI CHANNEL DIP switches</span></label>
+  </div>
+  <div class="settings-actions">
+    <button id="btn-apply-settings" class="primary">Apply to device</button>
+    <span id="settings-status" class="hint"></span>
+  </div>
+  <details class="advanced">
+    <summary>Advanced: raw SysEx</summary>
+    <div class="raw-sysex">
+      <input id="sysex-input" type="text" placeholder="F0 00 20 32 00 01 05 75 F7" spellcheck="false">
+      <button id="btn-send-sysex">Send</button>
+      <button id="btn-get-globals">Request globals (0x75)</button>
+      <button id="btn-identity">Identity request</button>
+    </div>
+    <p class="hint">Crave frame: F0 00 20 32 00 01 05 &lt;cmd&gt; &lt;data…&gt; F7. Responses appear in the MIDI Monitor.</p>
+  </details>
+  <details class="advanced danger-zone">
+    <summary>Danger zone</summary>
+    <p class="hint">
+      <strong>Clear all device patterns</strong> resets all 64 slots (8 banks × 8 patterns)
+      to the factory-blank shape: one C3 note on step 1, the rest silent. Safety: every slot
+      can be backed up to the library first, and the clear aborts before writing anything if
+      any backup read fails. Each write is verified by byte-exact readback. Progress in the
+      MIDI Monitor. Undo afterwards: "Restore all to device" in the Library tab.
+    </p>
+    <button id="btn-clear-all" class="danger">Clear all device patterns…</button>
+    <label class="toggle"><input id="clear-backup-first" type="checkbox" checked> Back up all 64 slots first (recommended)</label>
+    <span id="clear-status" class="hint"></span>
+  </details>
+</section>
+
+<!-- ================= LIBRARY ================= -->
+<section id="tab-library" class="tab-panel">
+  <div class="library-bar">
+    <button id="btn-lib-refresh">Refresh</button>
+    <button id="btn-lib-backup" class="primary">Backup all 64 slots</button>
+    <button id="btn-lib-restore">Restore all to device…</button>
+    <button id="btn-lib-import">Import JSON…</button>
+    <input id="lib-import-file" type="file" accept=".json,application/json" hidden>
+    <button id="btn-lib-delete-all" class="danger">Delete all…</button>
+    <span class="hint">patterns stored as JSON in the /data volume</span>
+  </div>
+  <table class="lib-table">
+    <thead><tr><th>Name</th><th>Steps</th><th>BPM</th><th>Updated</th><th>Device slot</th><th></th></tr></thead>
+    <tbody id="lib-body"></tbody>
+  </table>
+</section>
+
+<!-- ================= SONG ================= -->
+<section id="tab-song" class="tab-panel">
+  <div class="pattern-bar">
+    <input id="song-name" type="text" value="New Song" spellcheck="false">
+    <label class="toggle"><input id="song-loop" type="checkbox" checked> Loop song</label>
+    <button id="btn-song-add">+ Add pattern</button>
+    <button id="btn-song-save" class="primary">Save</button>
+    <button id="btn-song-play" class="play">▶ Play song</button>
+    <select id="song-load" title="Load a saved song"><option value="">— load song —</option></select>
+    <button id="btn-song-delete" class="danger">Delete</button>
+    <span id="song-status" class="hint"></span>
+  </div>
+  <p class="hint">Songs chain library patterns with repeats and transpose. The Crave has no song
+  memory — playback runs app-side through its MIDI input, so <strong>stop the device sequencer</strong>
+  while a song plays. Entries reference saved patterns; save your patterns first.</p>
+  <table class="lib-table song-table">
+    <thead><tr><th>#</th><th>Pattern</th><th>Repeats</th><th>Transpose</th><th></th></tr></thead>
+    <tbody id="song-body"></tbody>
+  </table>
+</section>
+<!-- ================= MODULATION ================= -->
+<section id="tab-modulation" class="tab-panel">
+  <div class="pattern-bar">
+    <label>BPM <input id="mod-tempo" type="number" min="20" max="300" value="120"></label>
+    <button id="btn-mod-start" class="play">▶ Start</button>
+    <button id="btn-mod-stop" class="stop">■ Stop</button>
+    <span id="mod-status" class="hint">stopped</span>
+  </div>
+  <p class="hint">App-side LFOs sent as MIDI CC / pitch bend / pressure. The Crave's pots are analog
+  (no SysEx control), so modulation reaches the patch bay via the <strong>ASSIGN jack</strong>:
+  hit <strong>→ ASSIGN</strong> on a slot to switch the ASSIGN output to that slot's source, then patch
+  ASSIGN into VCF cutoff, VCO pitch, VCA… Only one source feeds ASSIGN at a time. Pitch bend and
+  pressure also work directly without patching. MIDI channel follows Device Settings.</p>
+  <div id="mod-slots" class="mod-slots"></div>
+</section>
+<!-- ================= LIVE ================= -->
+<section id="tab-live" class="tab-panel">
+  <div class="live-bar">
+    <button id="oct-down">Oct −</button>
+    <span id="oct-label">C2</span>
+    <button id="oct-up">Oct +</button>
+    <label>Velocity <input id="live-vel" type="range" min="1" max="127" value="100"><span id="live-vel-val">100</span></label>
+    <span class="hint">mouse or keys: a w s e d f t g y h u j k</span>
+  </div>
+  <div id="live-keys" class="live-keys"></div>
+</section>
+
+<!-- ================= MONITOR ================= -->
+<section id="tab-monitor" class="tab-panel">
+  <div class="monitor-bar">
+    <button id="btn-monitor-clear">Clear</button>
+    <label class="toggle"><input id="monitor-autoscroll" type="checkbox" checked> autoscroll</label>
+    <span class="hint">all MIDI in/out, including SysEx responses</span>
+  </div>
+  <pre id="monitor-log"></pre>
+</section>
+</main>
+
+<footer>
+  <span id="footer-status">craved</span>
+</footer>
+
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div id="modal-title" class="modal-title"></div>
+    <div id="modal-body" class="modal-body"></div>
+    <div id="modal-input-row" class="modal-input-row" hidden>
+      <label>Type <strong id="modal-word"></strong> to confirm:
+        <input id="modal-input" type="text" autocomplete="off" spellcheck="false">
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button id="modal-cancel">Cancel</button>
+      <button id="modal-ok" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

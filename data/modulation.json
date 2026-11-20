@@ -1,0 +1,24 @@
+{
+  "tempo": 120,
+  "channel": 1,
+  "slots": [
+    {
+      "enabled": false,
+      "shape": "sine",
+      "rate_hz": 5.0,
+      "sync_beats": null,
+      "depth": 40,
+      "center": 64,
+      "target": "cc1"
+    },
+    {
+      "enabled": false,
+      "shape": "sine",
+      "rate_hz": 0.5,
+      "sync_beats": null,
+      "depth": 32,
+      "center": 64,
+      "target": "cc1"
+    }
+  ]
+}

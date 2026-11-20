@@ -1,0 +1,7 @@
+# Dev image: toolchain + ALSA deps only. Mount source + a cargo registry
+# volume for fast `cargo check` iteration (classic-builder friendly).
+FROM rust:1-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libasound2-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build

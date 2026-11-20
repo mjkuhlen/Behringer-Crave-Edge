@@ -74,6 +74,11 @@ sequence or trigger the Edge from the app while preserving its panel sequencer
 as a separate, clock-driven option. Keep device-specific capabilities and
 warnings visible: do not present unsupported Edge SysEx editing as available.
 
+The additional Edge MIDI videos suggest two useful workflows to explore:
+sequencing the Edge from an external DAW and triggering it as a pitched sound
+module. Use these as workflow inspiration and validate behavior against the
+instrument; videos are not protocol specifications.
+
 **Success checks:** independently authored clips can drive the Edge over MIDI;
 clock mode remains a separate option for playing the Edge's panel sequence;
 Crave device dumps still round-trip byte-exactly where supported.
@@ -134,3 +139,6 @@ depend on reverse-engineering the Edge sequencer.
 - [Behringer EDGE Quick Start Guide (PDF)](https://cdn-media.empowertribe.com/eb9d38bc2f1645859332a6c89247fd61/QSG_BE_EDGE_A5_WW.pdf)
 - [Behringer EDGE - Answering Your Questions](https://www.youtube.com/watch?v=NoCz0yFXQto)
 - [Behringer CRAVE: Review, tutorial and patch ideas (loopop)](https://youtu.be/GU0PQTswBt8)
+- [Behringer EDGE // Sequence with your DAW (Starsky Carr)](https://www.youtube.com/watch?v=mG-19XVU7lk&t=563s)
+- [Behringer EDGE MIDI Questions Answered (Starsky Carr)](https://www.youtube.com/watch?v=NQuho9IlCO4&t=105s)
+- [Behringer Edge as a Bass Synth Sound Module, triggered by Digitone (NOGASAYAN)](https://www.youtube.com/watch?v=vveurIXvM84)

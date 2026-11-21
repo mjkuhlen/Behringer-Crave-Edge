@@ -1,5 +1,5 @@
 //! MIDI clock transport: drives a device's INTERNAL sequencer when its clock
-//! source is set to USB/MIDI (Edge: rear CLOCK switch; Crave: clock source
+//! source is set to USB/MIDI (Crave: clock source
 //! setting). Sends MIDI Start (0xFA), 24 PPQN clock (0xF8) at the given BPM,
 //! and MIDI Stop (0xFC). This is distinct from app-side note playback — the
 //! device plays its own panel-programmed pattern under the app's tempo.

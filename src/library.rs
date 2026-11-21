@@ -101,19 +101,6 @@ impl Library {
     }
 }
 
-pub fn load_settings(data_dir: &Path) -> crate::crave::CraveSettings {
-    fs::read_to_string(data_dir.join("settings.json"))
-        .ok()
-        .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_default()
-}
-
-pub fn save_settings(data_dir: &Path, s: &crate::crave::CraveSettings) -> Result<()> {
-    fs::create_dir_all(data_dir)?;
-    fs::write(data_dir.join("settings.json"), serde_json::to_string_pretty(s)?)?;
-    Ok(())
-}
-
 /// Generic JSON value persistence (per-device settings files etc.)
 pub fn load_value(data_dir: &Path, file: &str) -> Option<serde_json::Value> {
     fs::read_to_string(data_dir.join(file))

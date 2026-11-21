@@ -39,19 +39,6 @@ pub struct Song {
 }
 
 impl Song {
-    pub fn new_empty(name: &str) -> Self {
-        let now = chrono::Utc::now().to_rfc3339();
-        Self {
-            schema_version: 1,
-            id: String::new(),
-            name: name.to_string(),
-            entries: Vec::new(),
-            loop_song: true,
-            created: now.clone(),
-            updated: now,
-        }
-    }
-
     pub fn normalize(&mut self) {
         self.entries.truncate(64);
         for e in &mut self.entries {

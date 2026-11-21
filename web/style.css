@@ -55,6 +55,12 @@ main { padding: 16px; max-width: 1100px; margin: 0 auto; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 .hint { color: var(--muted); font-size: 12px; }
+.help { max-width: 820px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 24px 20px; line-height: 1.55; }
+.help h2 { color: var(--accent); font-size: 15px; margin: 20px 0 8px; }
+.help dt { font-weight: 600; margin-top: 10px; }
+.help dd { margin: 2px 0 0 16px; color: var(--muted); }
+.help li { margin-bottom: 4px; }
+.help kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
 label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
 input[type="range"] { accent-color: var(--accent); width: 110px; }
 .toggle { cursor: pointer; }

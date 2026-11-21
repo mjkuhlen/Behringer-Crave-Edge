@@ -1,7 +1,6 @@
 mod api;
 mod crave;
 mod clock;
-mod edge;
 mod library;
 mod midi;
 mod modulation;

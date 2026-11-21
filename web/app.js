@@ -92,13 +92,13 @@ async function refreshDevices() {
   for (const d of S.devices) {
     const o = document.createElement("option");
     o.value = d.id;
-    o.textContent = `${d.name}${d.kind === "crave" || d.kind === "edge" ? " ★" : ""}${d.connected ? " ●" : ""}`;
+    o.textContent = `${d.name}${d.kind === "crave" ? " ★" : ""}${d.connected ? " ●" : ""}`;
     sel.appendChild(o);
   }
   if (S.connected && S.devices.some(d => d.id === S.connected)) sel.value = S.connected;
   else if (cur && S.devices.some(d => d.id === cur)) sel.value = cur;
   else {
-    const fav = S.devices.find(d => d.kind === "crave" || d.kind === "edge");
+    const fav = S.devices.find(d => d.kind === "crave");
     if (fav) sel.value = fav.id;
   }
   updateConnUI();
@@ -138,15 +138,6 @@ async function syncFromState() {
   S.playing = !!st.playing;
   await refreshDevices();
   if (S.connected) await loadSettings().catch(() => {});
-  applyKindUI();
-}
-function applyKindUI() {
-  const edge = S.kind === "edge";
-  document.querySelectorAll(".crave-only").forEach(el => el.hidden = edge);
-  document.querySelectorAll(".edge-only").forEach(el => el.hidden = !edge);
-  $("edge-notice").hidden = !edge;
-  $("btn-dump").disabled = edge;
-  $("btn-write-device").disabled = edge;
 }
 function renderDeviceStrip() {
   const strip = $("device-strip");
@@ -410,15 +401,6 @@ function fillSelect(sel, options, value) {
 function fillSettings() {
   if (!S.settings || !S.options) return;
   const s = S.settings;
-  if (S.kind === "edge") {
-    $("set-edge-bend").value = s.pitch_bend;
-    fillSelect($("set-edge-keypri"), S.options.key_priority || ["Low", "High", "Last"], s.key_priority);
-    $("set-edge-m2u").checked = !!s.through_m2u;
-    $("set-edge-mst").checked = !!s.through_mst;
-    $("set-edge-u2m").checked = !!s.through_u2m;
-    $("set-channel").value = s.midi_channel;
-    return;
-  }
   fillSelect($("set-clock-source"), S.options.clock_source, s.clock_source);
   fillSelect($("set-clock-type"), S.options.clock_type, s.clock_type);
   fillSelect($("set-clock-edge"), S.options.clock_edge, s.clock_edge);
@@ -436,17 +418,9 @@ async function loadSettings() {
   S.kind = j.kind || S.kind;
   S.settings = j.settings; S.options = j.options;
   fillSettings();
-  applyKindUI();
 }
 async function applySettings() {
-  const s = S.kind === "edge" ? {
-    pitch_bend: clamp(+$("set-edge-bend").value || 12, 0, 12),
-    key_priority: +$("set-edge-keypri").value,
-    through_m2u: $("set-edge-m2u").checked ? 1 : 0,
-    through_mst: $("set-edge-mst").checked ? 1 : 0,
-    through_u2m: $("set-edge-u2m").checked ? 1 : 0,
-    midi_channel: clamp(+$("set-channel").value || 1, 1, 16),
-  } : {
+  const s = {
     clock_source: +$("set-clock-source").value,
     clock_type: +$("set-clock-type").value,
     clock_edge: +$("set-clock-edge").value,

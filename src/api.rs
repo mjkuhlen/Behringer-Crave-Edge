@@ -7,7 +7,6 @@
 
 use crate::crave::{self, CraveSettings, Pattern};
 use crate::clock::ClockTransport;
-use crate::edge::{self, EdgeSettings};
 use crate::library::{self, Library};
 use crate::midi::{Event, MidiManager};
 use crate::modulation::{self, ModConfig, ModEngine};
@@ -34,20 +33,17 @@ use tower_http::services::{ServeDir, ServeFile};
 #[derive(Debug, Clone)]
 pub enum SettingsModel {
     Crave(CraveSettings),
-    Edge(EdgeSettings),
 }
 
 impl SettingsModel {
     fn to_json(&self) -> Value {
         match self {
             SettingsModel::Crave(s) => json!(s),
-            SettingsModel::Edge(s) => json!(s),
         }
     }
     fn midi_channel(&self) -> u8 {
         match self {
             SettingsModel::Crave(s) => s.midi_channel,
-            SettingsModel::Edge(s) => s.midi_channel,
         }
     }
 }
@@ -55,7 +51,7 @@ impl SettingsModel {
 /// Everything scoped to one connected device.
 pub struct DeviceCtx {
     pub id: String,
-    pub kind: String, // crave | edge | sim | other
+    pub kind: String, // crave | sim | other
     pub name: String,
     pub midi: Arc<MidiManager>,
     pub settings: Arc<Mutex<SettingsModel>>,
@@ -216,13 +212,7 @@ async fn devices(State(s): State<AppState>) -> Json<Value> {
 }
 
 fn load_settings_model(data_dir: &std::path::Path, kind: &str) -> SettingsModel {
-    if kind == "edge" {
-        let s = library::load_value(data_dir, "settings-edge.json")
-            .and_then(|v| serde_json::from_value::<EdgeSettings>(v).ok())
-            .unwrap_or_default();
-        return SettingsModel::Edge(s);
-    }
-    // crave / sim / other: CraveSettings; migrate the legacy settings.json
+    // CraveSettings for every kind; migrate the legacy settings.json
     let file = format!("settings-{}.json", kind);
     let v = library::load_value(data_dir, &file)
         .or_else(|| library::load_value(data_dir, "settings.json"));
@@ -274,29 +264,9 @@ async fn connect(State(s): State<AppState>, Json(req): Json<ConnectReq>) -> ApiR
         clock: Arc::new(ClockTransport::new(midi.clone(), s.events.clone())),
     });
 
-    // Probe globals (0x75): read-only. Crave/sim use the Crave frame; Edge the
-    // protocol-3 frame. Responses are captured raw for verification.
+    // Probe globals (0x75): read-only; the response is captured raw for verification.
     let mut globals_raw: Option<String> = None;
-    if dev.kind == "edge" {
-        midi.clear_responses();
-        let _ = midi.send(&edge::frame(edge::CMD_GET_GLOBALS, &[]));
-        tokio::time::sleep(Duration::from_millis(900)).await;
-        for r in midi.take_responses() {
-            if let Some((cmd, data)) = edge::parse(&r) {
-                if cmd == edge::CMD_ENTIRE_PARAMS || cmd == edge::CMD_GET_GLOBALS {
-                    globals_raw = Some(crave::hex(&r));
-                    if let Some(mut gs) = EdgeSettings::from_globals_bytes(&data) {
-                        {
-                            let mut cur = settings.lock().unwrap();
-                            gs.midi_channel = cur.midi_channel();
-                            *cur = SettingsModel::Edge(gs);
-                        }
-                        let _ = ctx.save_settings(&s.data_dir);
-                    }
-                }
-            }
-        }
-    } else if dev.kind == "crave" || dev.kind == "sim" {
+    if dev.kind == "crave" || dev.kind == "sim" {
         midi.clear_responses();
         let _ = midi.send(&crave::frame(crave::CMD_GET_GLOBALS, &[]));
         tokio::time::sleep(Duration::from_millis(if midi.is_sim() { 50 } else { 900 })).await;
@@ -421,7 +391,6 @@ async fn get_settings(State(s): State<AppState>) -> ApiResult<Value> {
             "clock_edge": crave::CLOCK_EDGES,
             "assign_mode": crave::ASSIGN_MODES,
         }),
-        SettingsModel::Edge(_) => json!({ "key_priority": edge::KEY_PRIORITIES }),
     };
     Ok(Json(json!({
         "kind": d.kind,
@@ -437,23 +406,12 @@ async fn put_settings(State(s): State<AppState>, Json(new): Json<Value>) -> ApiR
     // sends (a std MutexGuard held across .await makes the future non-Send)
     let (cmds, new_model) = {
         let guard = d.settings.lock().unwrap();
-        match (&*guard, d.kind.as_str()) {
-            (SettingsModel::Edge(old), "edge") => {
-                let mut new: EdgeSettings =
-                    serde_json::from_value(new).map_err(|e| anyhow!("invalid edge settings: {}", e))?;
-                new.validate();
-                let cmds = new.diff_commands(old);
-                (cmds, SettingsModel::Edge(new))
-            }
-            (SettingsModel::Crave(old), _) => {
-                let mut new: CraveSettings =
-                    serde_json::from_value(new).map_err(|e| anyhow!("invalid crave settings: {}", e))?;
-                new.validate();
-                let cmds = new.diff_commands(old);
-                (cmds, SettingsModel::Crave(new))
-            }
-            _ => return Err(anyhow!("settings model does not match device kind").into()),
-        }
+        let SettingsModel::Crave(old) = &*guard;
+        let mut new: CraveSettings =
+            serde_json::from_value(new).map_err(|e| anyhow!("invalid crave settings: {}", e))?;
+        new.validate();
+        let cmds = new.diff_commands(old);
+        (cmds, SettingsModel::Crave(new))
     };
     let mut applied = Vec::new();
     if connected {
@@ -884,7 +842,7 @@ struct PlayReq {
 
 fn start_play(d: &DeviceCtx, req: PlayReq) {
     // note playback and the device's own clock-driven sequencer fight each
-    // other (on the Edge a running sequencer masks MIDI notes) — stop the
+    // other — stop the
     // clock transport before playing notes on the same device
     d.clock.stop();
     let ch = req.channel.unwrap_or_else(|| d.settings.lock().unwrap().midi_channel());
@@ -1093,7 +1051,7 @@ struct RouteAssignReq {
 
 /// Switch the Crave's ASSIGN output to carry this slot's MIDI source, so the
 /// modulation appears at the ASSIGN jack for patching. Only one source feeds
-/// ASSIGN at a time. Crave only — the Edge has no ASSIGN output.
+/// ASSIGN at a time. Crave only.
 async fn mod_route_assign(State(s): State<AppState>, Json(req): Json<RouteAssignReq>) -> ApiResult<Value> {
     let d = s.cur()?;
     require_crave(&d)?;
@@ -1104,9 +1062,8 @@ async fn mod_route_assign(State(s): State<AppState>, Json(req): Json<RouteAssign
     d.midi.send(&frame)?;
     {
         let mut st = d.settings.lock().unwrap();
-        if let SettingsModel::Crave(cs) = &mut *st {
-            cs.assign_mode = mode;
-        }
+        let SettingsModel::Crave(cs) = &mut *st;
+        cs.assign_mode = mode;
     }
     let _ = d.save_settings(&s.data_dir);
     Ok(Json(json!({

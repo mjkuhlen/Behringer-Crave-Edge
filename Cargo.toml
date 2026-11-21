@@ -2,7 +2,7 @@
 name = "craved"
 version = "0.1.0"
 edition = "2021"
-description = "Linux companion daemon for Behringer Crave (and later Edge): SysEx librarian, sequencer, modulation workstation"
+description = "Linux companion daemon for Behringer Crave: SysEx librarian, sequencer, modulation workstation"
 license = "MIT"
 
 [dependencies]

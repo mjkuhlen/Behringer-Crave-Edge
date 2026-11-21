@@ -4,13 +4,11 @@
 
 This repository already has a substantial foundation: it connects multiple
 MIDI devices, edits and verifies Crave pattern dumps, stores songs, sends
-app-side MIDI playback and modulation, and includes a Crave simulator. The Edge
-is recognized and can receive app playback and MIDI clock, but its own
-sequencer is not editable through the app.
+app-side MIDI playback and modulation, and includes a Crave simulator.
 
 The clearest direction is to become a **hands-on companion for building,
-remembering, and performing with a Crave and an Edge together**. The instruments
-are semi-modular: useful work happens both in software and through patch cables,
+remembering, and performing with a Crave**. The instrument
+is semi-modular: useful work happens both in software and through patch cables,
 panel controls, and clock configuration. A patch notebook and a device-aware
 performance workflow would complement the existing hardware librarian instead
 of competing with Behringer's SynthTribe editor.
@@ -25,13 +23,9 @@ of competing with Behringer's SynthTribe editor.
   live keys, and modulation already work across connected-device contexts
   ([player.rs](../src/player.rs), [clock.rs](../src/clock.rs),
   [modulation.rs](../src/modulation.rs)).
-- **The Edge is deliberately partial:** its settings and MIDI clock are
-  supported, but pattern dump/write is Crave-only; the current UI explains
-  Edge-specific setup limitations ([edge.rs](../src/edge.rs),
-  [index.html](../web/index.html)).
-- **A strong test seam, but Crave-centric:** the built-in simulator exercises
+- **A strong test seam:** the built-in simulator exercises
   many workflows and the smoke test covers API behavior, while there is no
-  corresponding Edge simulator or automated browser test in the current
+  automated browser test in the current
   inventory ([sim.rs](../src/sim.rs), [smoke_test.py](../scripts/smoke_test.py)).
 - **The app is a trusted-network tool today:** the server binds to all
   interfaces and the API enables permissive CORS ([main.rs](../src/main.rs),
@@ -52,7 +46,7 @@ control, switch, jack, or cable. Add a **patch notebook** that stores:
   software pattern/song references.
 - A concise setup/checklist and a "restore this session" view.
 
-Start with a small set of verified Crave and Edge examples rather than a
+Start with a small set of verified Crave examples rather than a
 generic visual patch editor. Make it easy to capture analog state that cannot
 be saved as SysEx. This addresses an important gap between the quickstarts'
 hardware-first guidance and the app's current software-first tabs.
@@ -61,56 +55,46 @@ hardware-first guidance and the app's current software-first tabs.
 verified patch recipe, understand which steps require cables/panel changes,
 and save enough information to recreate the patch later.
 
-### 2. Give the Edge a first-class performance workflow
+### 2. Give software-authored patterns a first-class performance workflow
 
 Keep the existing Crave dump/write path intact, but distinguish it clearly
-from software-authored patterns that are played over MIDI. The current
-Crave-shaped step model and monophonic player are not a good long-term fit for
-an Edge-focused rhythm workflow.
+from software-authored patterns that are played over MIDI (ratchet, swing and
+global gate are app-playback only; the Crave stores none of them).
 
-Add a device-neutral **performance clip** model with explicit MIDI note or
-trigger lanes, per-lane note/velocity/gate, length, and timing. Let users
-sequence or trigger the Edge from the app while preserving its panel sequencer
-as a separate, clock-driven option. Keep device-specific capabilities and
-warnings visible: do not present unsupported Edge SysEx editing as available.
+Add a **performance clip** model that can hold what the device cannot store,
+so a clip can be played from the app or reduced to a device pattern with a
+clear warning about what is lost. Keep device capabilities and warnings
+visible.
 
-The additional Edge MIDI videos suggest two useful workflows to explore:
-sequencing the Edge from an external DAW and triggering it as a pitched sound
-module. Use these as workflow inspiration and validate behavior against the
-instrument; videos are not protocol specifications.
+**Success checks:** clips can be authored, played over MIDI, and reduced to a
+device pattern; clock mode remains a separate option for playing the Crave's
+own sequence; Crave device dumps still round-trip byte-exactly.
 
-**Success checks:** independently authored clips can drive the Edge over MIDI;
-clock mode remains a separate option for playing the Edge's panel sequence;
-Crave device dumps still round-trip byte-exactly where supported.
-
-### 3. Combine the two devices into a performable scene
+### 3. Combine patterns, songs, and modulation into a performable scene
 
 Add a **scene** that references existing library objects rather than copying
-them: Crave pattern or song, Edge clip or clock mode, per-device channel,
-tempo/transport behavior, and modulation configuration. Include a clear
+them: Crave pattern or song, channel, tempo/transport behavior, and
+modulation configuration. Include a clear
 preflight view for required connections, clock source, MIDI channel, and
-physical patching. A scene should make the existing multi-device capability
-feel intentional and repeatable.
+physical patching. A scene should make playback setup intentional and
+repeatable.
 
 **Success checks:** one action loads a scene's software state, reports any
-missing hardware setup, and starts/stops the intended devices together without
+missing hardware setup, and starts/stops playback without
 silently changing unrelated device settings.
 
 ### 4. Improve confidence before expanding hardware claims
 
-Extend the simulator and smoke coverage to the Edge settings, per-device
+Extend the smoke coverage to per-device
 selection, clock, and playback paths. Add hardware-validation notes and
-fixtures for any newly supported protocol behavior. Keep probing undocumented
-Edge sequencer SysEx as an optional research track; only productize it after
-repeatable read/write behavior is demonstrated on real units and safely
-verified.
+fixtures for any newly supported protocol behavior. Verify the still-unverified
+Crave globals layout on hardware before relying on it.
 
 For timing-sensitive playback, add measurable tests around clock cadence,
 stop behavior, note-off cleanup, and switching/stopping while events are
-scheduled. These checks are especially valuable before adding more devices or
-more concurrent lanes.
+scheduled.
 
-**Success checks:** simulator-based regressions cover both device kinds, and
+**Success checks:** simulator-based regressions cover playback and clock, and
 each hardware capability is labeled as documented, verified, or experimental.
 
 ### 5. Establish a safe deployment story
@@ -125,20 +109,15 @@ SysEx or destructive library/device operations to an untrusted network.
 ## Suggested order
 
 1. Patch notebook and guided first-use recipes.
-2. Edge-aware performance clips and Edge simulator coverage.
+2. Performance clips and playback test coverage.
 3. Combined scenes and preflight checks.
 4. Optional deeper protocol research, broader device support, and remote access
    only when user demand and validation justify them.
 
-This order delivers useful workflow improvements without making the roadmap
-depend on reverse-engineering the Edge sequencer.
+This order delivers useful workflow improvements without depending on
+unverified protocol work.
 
 ## Reference material
 
 - [Behringer CRAVE Quick Start Guide (PDF)](https://cdn-media.empowertribe.com/c909b084422e4efd95cf769b47573d5c/QSG_BE_0718-AAJ_CRAVE_WW.pdf)
-- [Behringer EDGE Quick Start Guide (PDF)](https://cdn-media.empowertribe.com/eb9d38bc2f1645859332a6c89247fd61/QSG_BE_EDGE_A5_WW.pdf)
-- [Behringer EDGE - Answering Your Questions](https://www.youtube.com/watch?v=NoCz0yFXQto)
 - [Behringer CRAVE: Review, tutorial and patch ideas (loopop)](https://youtu.be/GU0PQTswBt8)
-- [Behringer EDGE // Sequence with your DAW (Starsky Carr)](https://www.youtube.com/watch?v=mG-19XVU7lk&t=563s)
-- [Behringer EDGE MIDI Questions Answered (Starsky Carr)](https://www.youtube.com/watch?v=NQuho9IlCO4&t=105s)
-- [Behringer Edge as a Bass Synth Sound Module, triggered by Digitone (NOGASAYAN)](https://www.youtube.com/watch?v=vveurIXvM84)

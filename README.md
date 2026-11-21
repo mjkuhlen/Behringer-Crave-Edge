@@ -6,9 +6,8 @@ SynthTribe app, and goes further: pattern librarian, visual sequencer,
 device settings editor, and a modulation/playback workstation.
 
 **Status: hardware-verified, multi-device.** Crave pattern read/write confirmed
-on a real unit (nibble-packed wire format; see *Protocol* below). Edge settings
-protocol verified live (protocol-3 framing, 0x75/0x76 globals). Both devices can
-be connected and played **at the same time** — each gets its own MIDI connection,
+on a real unit (nibble-packed wire format; see *Protocol* below). Multiple
+devices can be connected and played **at the same time** — each gets its own MIDI connection,
 settings, player and modulation engine; a device strip in the UI selects the
 editor context and offers per-device transport.
 
@@ -38,14 +37,13 @@ No `--privileged`, no host networking needed.
 
 | Area | What it does |
 |---|---|
-| Device manager | Enumerates ALSA MIDI ports, auto-flags Crave/Edge, **multiple simultaneous connections**, per-device transport chips, built-in simulator |
+| Device manager | Enumerates ALSA MIDI ports, auto-flags Crave, **multiple simultaneous connections**, per-device transport chips, built-in simulator |
 | Sequencer | 32-step grid (4×8), per-step note/rest/accent/glide/velocity/gate, length 1–32, tempo, swing, global gate, ratchet 1–4× |
-| Playback | Monophonic note playback over MIDI with swing + gate scheduling + ratchet retriggers, live playhead in the UI. **Clock mode** (⏱ on the device chip): ▶/■ send MIDI start/stop + 24 PPQN clock at the header BPM to drive the device's OWN sequencer (set its clock source to USB/MIDI) — essential for the Edge, whose sequencer is panel-only |
+| Playback | Monophonic note playback over MIDI with swing + gate scheduling + ratchet retriggers, live playhead in the UI. **Clock mode** (⏱ on the device chip): ▶/■ send MIDI start/stop + 24 PPQN clock at the header BPM to drive the device's OWN sequencer (set its clock source to USB/MIDI) |
 | Song mode | Chain library patterns with per-entry repeats (1–999) and transpose (±24 st), loop, live entry highlight. App-side playback (the Crave has no song memory) — stop the device sequencer while a song plays |
 | Modulation engine | Two app-side LFO slots (sine/triangle/square/saw/random S&H), free Hz or tempo-synced (1/16…2 bars), depth + center, targets CC1/2/4/7, pitch bend, channel pressure. "→ ASSIGN" switches the Crave's ASSIGN output to the slot's source (0x1F) so it appears at the ASSIGN jack for CV patching |
 | Librarian | Save/load/import/export patterns as JSON; raw device SysEx preserved with dumps; songs stored separately |
-| Device settings | Crave: clock source/type/edge, ASSIGN mode (16 options), accent threshold, pitch bend range, seq auto-play, MIDI clock out. Edge: pitch bend range, key priority (Low/High/Last), MIDI through routing — all sent as documented SysEx and read back on connect |
-| Dump/restore | `0x77` get / `0x78` set sequencer data, bank 1–8 × pattern 1–8 |
+| Device settings | Crave: clock source/type/edge, ASSIGN mode (16 options), accent threshold, pitch bend range, seq auto-play, MIDI clock out | Dump/restore | `0x77` get / `0x78` set sequencer data, bank 1–8 × pattern 1–8 |
 | Live keys | 13-key keyboard (mouse + computer keys a–k), octave shift, velocity |
 | MIDI monitor | Every IN/OUT message incl. SysEx, over WebSocket |
 | Raw SysEx | Send arbitrary frames; identity request + globals request buttons |
@@ -58,7 +56,6 @@ No `--privileged`, no host networking needed.
 │  ├─ axum HTTP + WebSocket ── serves web/ (vanilla JS UI)               │
 │  ├─ midi.rs   midir/ALSA: enumerate, connect, send/receive             │
 │  ├─ crave.rs  Crave SysEx protocol, settings, pattern encode/decode      │
-│  ├─ edge.rs   Edge SysEx protocol (family 3), settings model             │
 │  ├─ sim.rs    built-in Crave simulator (same protocol)                 │
 │  ├─ player.rs tempo/swing/gate/ratchet playback + song chaining        │
 │  ├─ song.rs   song model + JSON store (/data/songs)                    │
@@ -66,7 +63,7 @@ No `--privileged`, no host networking needed.
 │  └─ library.rs JSON persistence (/data volume)                         │
 └───────────────/dev/snd────────────────────────────────────────────────┘
         ↕ ALSA sequencer (kernel-global)
-   Host USB MIDI: BEHRINGER CRAVE / EDGE / interfaces
+   Host USB MIDI: BEHRINGER CRAVE / interfaces
 ```
 
 ## Protocol honesty
@@ -123,22 +120,6 @@ The globals layout of `0x75`/`0x76` remains unverified — the test unit did not
 answer `0x75`; individual documented setting commands (`0x11`…`0x1F`) are the
 supported path.
 
-**Edge protocol (family 3) — verified live 2026-11-19**
-
-- Frame: `F0 00 20 32 00 01 22 00 <cmd> <data…> F7` — model id `00 01 22`,
-  protocol ≥ 3 inserts a device-id byte (`00`), so the command sits at index 8.
-- Globals: `0x75` request → `0x76` dump. Real dump is **5 bytes**:
-  `[?, ?, pitch_bend, key_priority, ?]` (observed `01 01 02 02 01` = ±2 st,
-  key priority "Last"). Through-flag indices 5/6/7 from the SynthTribe config
-  are beyond the short dump — through routing is write-only until verified.
-- Writes: `0x11 <semitones> 00` (pitch bend, trailing zero per SynthHUB's
-  wire map), `0x12 <priority>` (0=Low 1=High 2=Last), `0x28 <m2u> <mst> <u2m>`
-  (MIDI through composite).
-- The Edge's dual 8-step sequencer has **no documented SysEx** (SynthTribe and
-  SynthHUB expose only General/PolyChain/Update for it) — panel-only for now;
-  pattern dump/write is Crave-only. The app plays the Edge via MIDI notes
-  (Live Keys, Song mode, modulation).
-
 **Multi-device API**
 
 `POST /api/connect` adds a device (does not replace existing connections);
@@ -147,7 +128,7 @@ supported path.
 Legacy `/api/*` routes operate on the selected device; `/api/d/:id/*`
 (`state`, `play`, `play-song`, `stop`, `note`, `modulation/start|stop`)
 address any connected device directly for simultaneous playback.
-Settings persist per device kind (`settings-crave.json`, `settings-edge.json`).
+Settings persist per device kind (`settings-crave.json`).
 
 ## API sketch
 
@@ -208,10 +189,5 @@ cargo run -- --port 8090 --data-dir ./data --web-dir ./web
    ASSIGN jack → VCF CUTOFF / OSC FM / LFO RATE (ASSIGN routing set via `0x1F`).
 3. **Patch documentation**: interactive patchbay diagram (18 in / 15 out),
    knob-position recipes, photos — the analog state the Crave can't save.
-4. **Edge module**: CV pattern capture/restore via PITCH/VELOCITY outs +
-   OSC CV/VELOCITY/TRIGGER ins (needs DC-coupled audio interface), tuning
-   assistant, drum-map mode.
-5. **Pair conductor**: Crave+Edge as one instrument — Crave KB CV/GATE/ASSIGN
-   drive the Edge over patch cables; shared transport, cross-calibration.
-6. MIDI clock master/slave tied to PipeWire/JACK transport; poly-chain
+4. MIDI clock master/slave tied to PipeWire/JACK transport; poly-chain
    voice allocation across multiple Craves.

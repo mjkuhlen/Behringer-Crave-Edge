@@ -14,7 +14,6 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const SYSEX_START: u8 = 0xF0;
 pub const SYSEX_END: u8 = 0xF7;
 /// F0 00 20 32 00 01 05
 pub const HEADER: [u8; 7] = [0xF0, 0x00, 0x20, 0x32, 0x00, 0x01, 0x05];
@@ -342,7 +341,6 @@ impl Pattern {
 /// pattern memory. Byte-exact backup/restore replays the captured raw frame.
 pub const STEP_COUNT: usize = 32;
 pub const BODY_LEN: usize = 3 + STEP_COUNT * 4; // 131
-pub const PATTERN_PAYLOAD_LEN: usize = 2 + BODY_LEN * 2; // 264
 const TRIG_FULL: u8 = 0x30;
 const TRIG_SLIDE_MIN: u8 = 0x54;
 const TRIG_SLIDE: u8 = 0x60;
@@ -443,11 +441,6 @@ pub fn decode_pattern_data(payload: &[u8]) -> Option<(u8, u8, Pattern)> {
     p.device_bank = Some(bank);
     p.device_pattern = Some(pat);
     Some((bank, pat, p))
-}
-
-pub fn note_name(n: u8) -> String {
-    const NAMES: [&str; 12] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-    format!("{}{}", NAMES[(n % 12) as usize], (n / 12) as i32 - 1)
 }
 
 #[cfg(test)]

@@ -95,7 +95,9 @@ impl Player {
             });
 
             loop {
-                tokio::time::sleep_until(next).await;
+                // wake for the next step or the earliest scheduled note-off/ratchet
+                let wake = pending.iter().map(|(t, _)| *t).min().map_or(next, |t| t.min(next));
+                tokio::time::sleep_until(wake).await;
                 if generation.load(Ordering::SeqCst) != gen {
                     break;
                 }
@@ -109,6 +111,9 @@ impl Player {
                         true
                     }
                 });
+                if now < next {
+                    continue;
+                }
                 let _ = events.send(Event::Playhead { device: midi.id(), step: i, playing: true });
 
                 let pat = &cur!().pattern;
@@ -120,9 +125,6 @@ impl Player {
                 let note = (step.note as i16 + cur!().transpose as i16).clamp(0, 127) as u8;
 
                 if !step.rest {
-                    if let Some(n) = last_note.take() {
-                        let _ = midi.send(&[0x80 | ch, n, 0]);
-                    }
                     let vel = if step.accent { 127 } else { step.velocity };
                     let ratchet = pat.ratchet.max(1) as usize;
                     if ratchet == 1 {
@@ -130,7 +132,9 @@ impl Player {
                             failed = true;
                             break;
                         }
-                        let gate = tick.as_secs_f64() * (step.gate as f64 / 100.0) * gate_scale;
+                        // cap below the step so the off never lands on the next note-on
+                        let gate = (tick.as_secs_f64() * (step.gate as f64 / 100.0) * gate_scale)
+                            .min(tick.as_secs_f64() * 0.9);
                         pending.push((
                             now + Duration::from_secs_f64(gate.max(0.005)),
                             vec![0x80 | ch, note, 0],

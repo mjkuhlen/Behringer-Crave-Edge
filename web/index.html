@@ -32,20 +32,12 @@
   <button class="tab" data-tab="modulation">Modulation</button>
   <button class="tab" data-tab="live">Live Keys</button>
   <button class="tab" data-tab="monitor">MIDI Monitor</button>
+  <button class="tab" data-tab="help">Help</button>
 </nav>
 
 <main>
 <!-- ================= SEQUENCER ================= -->
 <section id="tab-sequencer" class="tab-panel active">
-  <p id="edge-notice" class="hint" hidden><strong>Edge selected.</strong> The Edge's dual sequencer has no
-  documented SysEx — pattern dump/write is Crave-only. To play the Edge from the app:
-  <strong>①</strong> rear MIDI CHANNEL DIP switches — all four DOWN = channel 1 (legend printed on the case);
-  match App MIDI channel in Device Settings. <strong>②</strong> For clean note playback, STOP the internal
-  sequencer and set <strong>SEQ PITCH MOD = OFF</strong> (middle), then tune with the FREQUENCY knobs —
-  otherwise the step pitch knobs fight the incoming notes. <strong>③</strong> To run the Edge's own
-  sequencer instead: CLOCK switch = USB/MIDI, enable <strong>⏱ clock mode</strong> on the device chip and press ▶
-  (the Edge starts on incoming clock). MIDI velocity appears at the VELOCITY CV jack (patch it to VCF MOD for
-  velocity-driven filter movement). No MIDI swing, no MIDI sequence reset — those are panel-only.</p>
   <div class="pattern-bar">
     <input id="pattern-name" type="text" value="Untitled" spellcheck="false">
     <label>Length <select id="pattern-length"></select></label>
@@ -96,11 +88,6 @@
     <label class="crave-only">Pitch bend up <input id="set-bend-up" type="number" min="0" max="24" value="2"></label>
     <label class="crave-only toggle"><input id="set-autoplay" type="checkbox"> Sequencer auto-play</label>
     <label class="crave-only toggle"><input id="set-clock-out" type="checkbox"> MIDI clock out (OUT/THRU)</label>
-    <label class="edge-only" hidden>Pitch bend range <input id="set-edge-bend" type="number" min="0" max="12" value="12"></label>
-    <label class="edge-only" hidden>Key priority <select id="set-edge-keypri"></select></label>
-    <label class="edge-only toggle" hidden><input id="set-edge-m2u" type="checkbox"> MIDI DIN → USB</label>
-    <label class="edge-only toggle" hidden><input id="set-edge-mst" type="checkbox"> MIDI DIN → DIN thru</label>
-    <label class="edge-only toggle" hidden><input id="set-edge-u2m" type="checkbox"> USB → MIDI DIN out</label>
     <label>App MIDI channel <input id="set-channel" type="number" min="1" max="16" value="1"><span class="hint">must match the rear-panel MIDI CHANNEL DIP switches</span></label>
   </div>
   <div class="settings-actions">
@@ -204,6 +191,55 @@
     <span class="hint">all MIDI in/out, including SysEx responses</span>
   </div>
   <pre id="monitor-log"></pre>
+</section>
+
+<!-- ================= HELP ================= -->
+<section id="tab-help" class="tab-panel">
+  <div class="help">
+    <h2>Getting started</h2>
+    <ol>
+      <li>Connect the Crave over USB, then press <strong>⟳</strong> to rescan and pick <em>BEHRINGER CRAVE</em> in the device bar.
+        No hardware? Choose <em>Crave Simulator (built-in)</em>.</li>
+      <li>Click <strong>Connect</strong>. Several devices can be connected at once; each gets a chip below the header with its own play, stop and disconnect buttons.</li>
+      <li>Set <strong>App MIDI channel</strong> in Device Settings to match the rear-panel MIDI CHANNEL DIP switches.</li>
+      <li>Program steps in the Sequencer and press <strong>▶</strong>.</li>
+    </ol>
+
+    <h2>Tabs</h2>
+    <dl>
+      <dt>Sequencer</dt>
+      <dd>32-step grid with per-step note, rest, accent, glide, velocity and gate. Length, swing, global gate and ratchet (1–4×) apply to the whole pattern.
+        <strong>Dump from device</strong> reads a bank/pattern slot from the Crave; <strong>Write to device</strong> overwrites a slot and verifies it by readback.</dd>
+      <dt>Device Settings</dt>
+      <dd>Clock source/type/edge, ASSIGN output mode, accent threshold, pitch bend range, sequencer auto-play and MIDI clock out. Only changed values are sent as SysEx.
+        Includes raw SysEx and a danger zone for clearing all 64 device slots.</dd>
+      <dt>Library</dt>
+      <dd>Saved patterns (JSON in the data volume). Back up all 64 device slots, restore them, import or delete.</dd>
+      <dt>Song</dt>
+      <dd>Chain saved patterns with repeats and transpose. The Crave has no song memory, so playback runs from the app.</dd>
+      <dt>Modulation</dt>
+      <dd>App-side LFOs sent as CC, pitch bend or channel pressure. <strong>→ ASSIGN</strong> routes a slot to the ASSIGN jack for patching.</dd>
+      <dt>Live Keys</dt>
+      <dd>On-screen keyboard; computer keys <kbd>a w s e d f t g y h u j k</kbd>.</dd>
+      <dt>MIDI Monitor</dt>
+      <dd>Every MIDI message in and out, including SysEx.</dd>
+    </dl>
+
+    <h2>Playback modes</h2>
+    <ul>
+      <li><strong>App playback (default):</strong> the app sends notes with swing, gate and ratchet. Ratchet, swing and global gate are not stored on the Crave.</li>
+      <li><strong>Clock mode (⏱ on the device chip):</strong> ▶/■ send MIDI start/stop and 24 PPQN clock at the header BPM to drive the Crave's own sequencer. Set its clock source to USB or MIDI first.</li>
+      <li>Notes and the device sequencer fight each other. Starting app playback stops the clock on that device; stop the device sequencer before playing a song.</li>
+    </ul>
+
+    <h2>Things to know</h2>
+    <ul>
+      <li>Accent is velocity 112 or higher on the Crave; there is no separate accent bit.</li>
+      <li>Device writes are committed immediately. Back up first if the slot matters.</li>
+      <li>The Crave's knobs are analog and cannot be read or set over MIDI, so patch cables and knob positions are not saved by the app.</li>
+      <li>The server has no authentication. Use it on your own machine or a trusted network.</li>
+    </ul>
+  </div>
 </section>
 </main>
 

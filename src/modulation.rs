@@ -45,16 +45,6 @@ impl ModTarget {
             ModTarget::Aftertouch => Some(10),
         }
     }
-    pub fn label(self) -> &'static str {
-        match self {
-            ModTarget::Cc1 => "CC1 (mod wheel)",
-            ModTarget::Cc2 => "CC2 (breath)",
-            ModTarget::Cc4 => "CC4 (foot)",
-            ModTarget::Cc7 => "CC7 (volume)",
-            ModTarget::Pitchbend => "Pitch bend",
-            ModTarget::Aftertouch => "Channel pressure",
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

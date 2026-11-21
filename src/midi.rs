@@ -29,7 +29,7 @@ pub enum Event {
 pub struct DeviceInfo {
     pub id: String,
     pub name: String,
-    /// crave | edge | other | sim
+    /// crave | other | sim
     pub kind: String,
     pub in_port: Option<String>,
     pub out_port: Option<String>,
@@ -42,7 +42,6 @@ enum Connection {
     },
     Hardware {
         device_id: String,
-        name: String,
         conn_out: MidiOutputConnection,
         #[allow(dead_code)]
         conn_in: Option<MidiInputConnection<()>>,
@@ -66,8 +65,6 @@ fn kind_from_name(name: &str) -> String {
     };
     if hit("CRAVE") {
         "crave".into()
-    } else if hit("EDGE") {
-        "edge".into()
     } else {
         "other".into()
     }
@@ -164,14 +161,6 @@ impl MidiManager {
         }
     }
 
-    pub fn connected_name(&self) -> Option<String> {
-        let g = self.inner.lock().ok()?;
-        match g.as_ref()? {
-            Connection::Sim { .. } => Some("Crave Simulator (built-in)".into()),
-            Connection::Hardware { name, .. } => Some(name.clone()),
-        }
-    }
-
     pub fn is_sim(&self) -> bool {
         matches!(&*self.inner.lock().unwrap(), Some(Connection::Sim { .. }))
     }
@@ -201,7 +190,7 @@ impl MidiManager {
             .clone()
             .ok_or_else(|| anyhow!("device {} has no MIDI output port", device_id))?;
 
-        let mut mo = MidiOutput::new("craved").map_err(|e| anyhow!("MIDI out init: {:?}", e))?;
+        let mo = MidiOutput::new("craved").map_err(|e| anyhow!("MIDI out init: {:?}", e))?;
         let ports = mo.ports();
         let port = ports
             .iter()
@@ -251,7 +240,6 @@ impl MidiManager {
 
         *self.inner.lock().unwrap() = Some(Connection::Hardware {
             device_id: dev.id.clone(),
-            name: dev.name.clone(),
             conn_out,
             conn_in,
         });

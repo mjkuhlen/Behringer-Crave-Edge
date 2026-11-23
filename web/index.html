@@ -44,7 +44,7 @@
     <label>Length <select id="pattern-length"></select></label>
     <label>Swing <input id="swing" type="range" min="0" max="75" value="0"><span id="swing-val">0%</span></label>
     <label>Gate <input id="gate-length" type="range" min="10" max="100" value="50"><span id="gate-val">50%</span></label>
-    <label title="Retriggers per step (all steps). On the device: SHIFT + GLIDE during playback — not saved in device patterns.">Ratchet <select id="ratchet"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label>
+    <label title="Legacy pattern default for steps loaded without an individual ratchet value. Set an exact value in the selected step editor.">Ratchet default <select id="ratchet"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label>
     <button id="btn-new">New</button>
     <button id="btn-save" class="primary">Save</button>
     <span id="save-status" class="hint"></span>
@@ -64,6 +64,7 @@
       <label class="toggle"><input id="step-glide" type="checkbox"> Glide</label>
       <label>Vel <input id="step-velocity" type="range" min="1" max="127" value="100"><span id="step-vel-val">100</span></label>
       <label>Gate <input id="step-gate" type="range" min="1" max="100" value="50"><span id="step-gate-val">50%</span></label>
+      <label>Ratchet <select id="step-ratchet"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label>
     </div>
   </div>
 

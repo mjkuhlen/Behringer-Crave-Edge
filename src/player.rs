@@ -126,7 +126,7 @@ impl Player {
 
                 if !step.rest {
                     let vel = if step.accent { 127 } else { step.velocity };
-                    let ratchet = pat.ratchet.max(1) as usize;
+                    let ratchet = step.ratchet.clamp(1, 4) as usize;
                     if ratchet == 1 {
                         if midi.send(&[0x90 | ch, note, vel]).is_err() {
                             failed = true;

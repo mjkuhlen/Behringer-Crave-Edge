@@ -38,7 +38,7 @@ No `--privileged`, no host networking needed.
 | Area | What it does |
 |---|---|
 | Device manager | Enumerates ALSA MIDI ports, auto-flags Crave, **multiple simultaneous connections**, per-device transport chips, built-in simulator |
-| Sequencer | 32-step grid (4×8), per-step note/rest/accent/glide/velocity/gate, length 1–32, tempo, swing, global gate, ratchet 1–4× |
+| Sequencer | 32-step grid (4×8), per-step note/rest/accent/glide/velocity/gate/ratchet, length 1–32, tempo, swing and global gate |
 | Playback | Monophonic note playback over MIDI with swing + gate scheduling + ratchet retriggers, live playhead in the UI. **Clock mode** (⏱ on the device chip): ▶/■ send MIDI start/stop + 24 PPQN clock at the header BPM to drive the device's OWN sequencer (set its clock source to USB/MIDI) |
 | Song mode | Chain library patterns with per-entry repeats (1–999) and transpose (±24 st), loop, live entry highlight. App-side playback (the Crave has no song memory) — stop the device sequencer while a song plays |
 | Modulation engine | Two app-side LFO slots (sine/triangle/square/saw/random S&H), free Hz or tempo-synced (1/16…2 bars), depth + center, targets CC1/2/4/7, pitch bend, channel pressure. "→ ASSIGN" switches the Crave's ASSIGN output to the slot's source (0x1F) so it appears at the ASSIGN jack for CV patching |
@@ -104,7 +104,7 @@ HW-verified type-0 mono codec; unit-tested against captured dumps in
 - `vel` = MIDI velocity 1–127 (`0xFF` virgin → plays as 64). **Accent is
   velocity ≥ 112** — there is no separate accent bit.
 - `flags`: bit 7 = REST; bits 0–6 have no audible effect (preserved).
-- The Crave stores no ratchet/probability; those are app-playback only.
+- The Crave stores no ratchet/probability in its pattern dumps. Ratchet is app/PWA playback state, available per step in this app; it is retriggered by MIDI note-on/off playback and is not written to or returned by the Crave pattern format.
 - **There is no save/commit handshake** — a `0x78` write commits straight to
   pattern memory, playing or stopped, loaded or not.
 - Steps beyond the active length keep stale data (not rests).

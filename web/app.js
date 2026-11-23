@@ -45,7 +45,7 @@ const S = {
 function newPattern() {
   return {
     schema_version: 1, id: "", name: "Untitled", length: 16, tempo: 120, swing: 0, gate_length: 50, ratchet: 1,
-    steps: Array.from({length: 32}, () => ({note: 36, rest: true, accent: false, glide: false, gate: 50, velocity: 100})),
+    steps: Array.from({length: 32}, () => ({note: 36, rest: true, accent: false, glide: false, gate: 50, velocity: 100, ratchet: 1})),
     created: "", updated: "",
   };
 }
@@ -259,7 +259,8 @@ function renderGrid() {
     const cell = document.createElement("div");
     cell.className = "step" + (s.rest ? " rest" : "") + (i >= S.pattern.length ? " inactive" : "")
       + (i === S.selStep ? " selected" : "") + (i === S.playhead && S.playing ? " playhead" : "");
-    const flags = (s.rest ? '<span class="r">R</span>' : "") + (s.accent ? '<span class="a">A</span>' : "") + (s.glide ? '<span class="g">G</span>' : "");
+    const ratchet = s.ratchet || 1;
+    const flags = (s.rest ? '<span class="r">R</span>' : "") + (s.accent ? '<span class="a">A</span>' : "") + (s.glide ? '<span class="g">G</span>' : "") + (ratchet > 1 ? `<span class="ratchet">×${ratchet}</span>` : "");
     cell.innerHTML = `<div class="num">${i + 1}</div><div class="note">${s.rest ? "—" : noteName(s.note)}</div><div class="flags">${flags}</div>`;
     cell.addEventListener("click", () => selectStep(i));
     g.appendChild(cell);
@@ -278,6 +279,7 @@ function selectStep(i) {
   $("step-vel-val").textContent = s.velocity;
   $("step-gate").value = s.gate;
   $("step-gate-val").textContent = s.gate + "%";
+  $("step-ratchet").value = s.ratchet || S.pattern.ratchet || 1;
   renderGrid();
   renderMiniKeys();
 }
@@ -892,6 +894,7 @@ function init() {
   $("step-glide").addEventListener("change", () => editStep(s => s.glide = $("step-glide").checked));
   $("step-velocity").addEventListener("input", () => { const v = +$("step-velocity").value; $("step-vel-val").textContent = v; editStep(s => s.velocity = v); });
   $("step-gate").addEventListener("input", () => { const v = +$("step-gate").value; $("step-gate-val").textContent = v + "%"; editStep(s => s.gate = v); });
+  $("step-ratchet").addEventListener("change", () => editStep(s => s.ratchet = parseInt($("step-ratchet").value) || 1));
   // device slot
   $("btn-dump").addEventListener("click", dumpFromDevice);
   $("btn-write-device").addEventListener("click", writeToDevice);

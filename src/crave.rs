@@ -231,11 +231,18 @@ pub struct Step {
     /// device flags bits 0..6 (no audible effect; preserved across roundtrips)
     #[serde(default)]
     pub flags_low: u8,
+    /// App/PWA-only retrigger count for this step. 1 is a normal hit.
+    #[serde(default = "default_step_ratchet")]
+    pub ratchet: u8,
+}
+
+fn default_step_ratchet() -> u8 {
+    0
 }
 
 impl Default for Step {
     fn default() -> Self {
-        Self { note: 36, rest: true, accent: false, glide: false, gate: 50, velocity: 100, flags_low: 0 }
+        Self { note: 36, rest: true, accent: false, glide: false, gate: 50, velocity: 100, flags_low: 0, ratchet: 1 }
     }
 }
 
@@ -307,9 +314,11 @@ impl Pattern {
         }
         self.steps.truncate(32);
         for s in &mut self.steps {
+            if s.ratchet == 0 { s.ratchet = self.ratchet; }
             s.note = s.note.min(127);
             s.gate = s.gate.min(100);
             s.velocity = s.velocity.clamp(1, 127);
+            s.ratchet = s.ratchet.clamp(1, 4);
         }
     }
 }
@@ -333,10 +342,9 @@ impl Pattern {
 ///     vel   = MIDI velocity 1..127 (0xff virgin -> plays as 64);
 ///             accent = velocity >= 112, there is no separate accent bit
 ///     flags = bit7 REST; bits 0..6 have no audible effect (preserved)
-/// The Crave stores no per-step ratchet/probability. Ratchet exists as a
-/// LIVE PERFORMANCE control (SHIFT + GLIDE during playback, applies to all
-/// steps, not saved with the pattern — manual "LIVE PERFORMANCE"); the app
-/// models it as Pattern.ratchet for its own playback.
+/// The Crave stores no per-step ratchet/probability in the pattern format.
+/// Ratchet is app/PWA playback state. This app stores it per Step.ratchet
+/// (1..4), and retriggers MIDI notes when app playback reaches that step.
 /// There is NO save/commit handshake — a 0x78 write commits straight to
 /// pattern memory. Byte-exact backup/restore replays the captured raw frame.
 pub const STEP_COUNT: usize = 32;
@@ -435,6 +443,7 @@ pub fn decode_pattern_data(payload: &[u8]) -> Option<(u8, u8, Pattern)> {
             gate,
             velocity,
             flags_low: flags & 0x7f,
+            ratchet: 1, // default for loaded patterns
         };
     }
     p.normalize();

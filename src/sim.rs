@@ -36,6 +36,7 @@ impl SimCrave {
                 gate: 45,
                 velocity: 100,
                 flags_low: 0,
+                ratchet: 1,
             };
         }
         self.patterns.insert((0, 0), p);
@@ -54,6 +55,7 @@ impl SimCrave {
                 gate: 70,
                 velocity: 110,
                 flags_low: 0,
+                ratchet: 1,
             };
         }
         self.patterns.insert((0, 1), p2);

@@ -178,7 +178,26 @@ check("mod stopped", call("GET", "/api/state").get("mod_running") is False)
 mc["slots"][0]["enabled"] = False
 call("PUT", "/api/modulation", mc)
 
-# 13b. multi-device API: per-device routes, select, targeted disconnect
+# 13b. patch notebook: seeded recipe + user patch CRUD
+patches = call("GET", "/api/patches").get("patches", [])
+check("patch recipe seeded", any(p.get("is_recipe") and p.get("name") == "Crave — first sequenced note" for p in patches), str(patches)[:160])
+patch = {
+    "schema_version": 1, "id": "", "name": "Smoke Patch", "device_kind": "crave",
+    "notes": "Smoke-test analog setup",
+    "cables": [{"from": "VCO OUT", "to": "VCF IN", "color": "", "notes": "starter route"}],
+    "controls": [{"control": "Clock source", "value": "USB/MIDI"}],
+    "pattern_ids": [], "song_ids": [],
+    "checklist": [{"text": "Set MIDI channel", "done": False}],
+}
+sp = call("POST", "/api/patches", patch)
+check("patch saved", bool(sp.get("id")) and sp.get("cables", [{}])[0].get("to") == "VCF IN", str(sp)[:160])
+pl = call("GET", f"/api/patches/{sp['id']}")
+check("patch loaded", pl.get("notes") == "Smoke-test analog setup", str(pl)[:160])
+pu = call("PUT", f"/api/patches/{sp['id']}", {**sp, "name": "Smoke Patch Renamed", "checklist": [{"text": "Set MIDI channel", "done": True}]})
+check("patch updated", pu.get("name") == "Smoke Patch Renamed" and pu.get("checklist", [{}])[0].get("done") is True, str(pu)[:160])
+check("patch deleted", call("DELETE", f"/api/patches/{sp['id']}").get("deleted") is True)
+
+# 13c. multi-device API: per-device routes, select, targeted disconnect
 st = call("GET", "/api/state")
 check("state lists devices", any(x["id"] == "sim-crave" for x in st.get("devices", [])) and st.get("selected") == "sim-crave", str(st)[:160])
 dp = call("POST", "/api/d/sim-crave/play", {"pattern": rp, "channel": 1})

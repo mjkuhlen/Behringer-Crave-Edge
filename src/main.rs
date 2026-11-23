@@ -4,6 +4,7 @@ mod clock;
 mod library;
 mod midi;
 mod modulation;
+mod patch;
 mod player;
 mod sim;
 mod song;
@@ -42,6 +43,7 @@ async fn main() -> Result<()> {
     let enumerator = Arc::new(midi::MidiManager::new(events.clone()));
     let library = Arc::new(library::Library::new(args.data_dir.join("patterns"))?);
     let songs = Arc::new(song::SongStore::new(args.data_dir.join("songs"))?);
+    let patches = Arc::new(patch::PatchStore::new(args.data_dir.join("patches"))?);
 
     let state = api::AppState {
         contexts: Arc::new(Mutex::new(std::collections::HashMap::new())),
@@ -49,6 +51,7 @@ async fn main() -> Result<()> {
         enumerator,
         library,
         songs,
+        patches,
         events,
         data_dir: args.data_dir.clone(),
     };

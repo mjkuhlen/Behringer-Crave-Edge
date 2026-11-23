@@ -29,6 +29,7 @@
   <button class="tab" data-tab="settings">Device Settings</button>
   <button class="tab" data-tab="library">Library</button>
   <button class="tab" data-tab="song">Song</button>
+  <button class="tab" data-tab="patch">Patch Notebook</button>
   <button class="tab" data-tab="modulation">Modulation</button>
   <button class="tab" data-tab="live">Live Keys</button>
   <button class="tab" data-tab="monitor">MIDI Monitor</button>
@@ -70,7 +71,7 @@
     <strong>Device slot</strong>
     <label>Bank <select id="dump-bank"></select></label>
     <label>Pattern <select id="dump-pattern"></select></label>
-    <button id="btn-dump">Dump from device</button>
+    <button id="btn-dump" class="primary">Dump from device</button>
     <button id="btn-write-device" class="danger">Write to device…</button>
     <span class="hint">wire format hardware-verified — raw SysEx always preserved</span>
   </div>
@@ -123,13 +124,18 @@
 <section id="tab-library" class="tab-panel">
   <div class="library-bar">
     <button id="btn-lib-refresh">Refresh</button>
-    <button id="btn-lib-backup" class="primary">Backup all 64 slots</button>
-    <button id="btn-lib-restore">Restore all to device…</button>
     <button id="btn-lib-import">Import JSON…</button>
     <input id="lib-import-file" type="file" accept=".json,application/json" hidden>
-    <button id="btn-lib-delete-all" class="danger">Delete all…</button>
     <span class="hint">patterns stored as JSON in the /data volume</span>
   </div>
+  <details class="library-maintenance">
+    <summary>Device &amp; library maintenance</summary>
+    <div class="library-maintenance-actions">
+      <button id="btn-lib-backup" class="primary">Backup all 64 slots</button>
+      <button id="btn-lib-restore">Restore all to device…</button>
+      <button id="btn-lib-delete-all" class="danger">Delete all patterns…</button>
+    </div>
+  </details>
   <table class="lib-table">
     <thead><tr><th>Name</th><th>Steps</th><th>BPM</th><th>Updated</th><th>Device slot</th><th></th></tr></thead>
     <tbody id="lib-body"></tbody>
@@ -155,6 +161,25 @@
     <thead><tr><th>#</th><th>Pattern</th><th>Repeats</th><th>Transpose</th><th></th></tr></thead>
     <tbody id="song-body"></tbody>
   </table>
+</section>
+<!-- ================= PATCH NOTEBOOK ================= -->
+<section id="tab-patch" class="tab-panel">
+  <div class="patch-toolbar">
+    <select id="patch-load" title="Load a saved patch"><option value="">— load patch / recipe —</option></select>
+    <button id="btn-patch-new">New</button>
+    <button id="btn-patch-save" class="primary">Save</button>
+    <button id="btn-patch-delete" class="danger">Delete</button>
+  </div>
+  <div class="patch-layout">
+    <div class="patch-main">
+      <label class="patch-name-field">Patch name<input id="patch-name" type="text" value="New Patch" spellcheck="false"></label>
+      <label class="patch-field">Notes<textarea id="patch-notes" rows="5" placeholder="Sound description, patch intent, setup notes…"></textarea></label>
+      <div class="patch-section"><div class="patch-section-head"><strong>Cables</strong><button id="btn-patch-add-cable">+ Add cable</button></div><div id="patch-cables"></div></div>
+      <div class="patch-section"><div class="patch-section-head"><strong>Panel controls</strong><button id="btn-patch-add-control">+ Add control</button></div><div id="patch-controls"></div></div>
+    </div>
+    <aside class="patch-checklist"><h3>Restore checklist</h3><div id="patch-checklist"></div><button id="btn-patch-add-check">+ Add check</button></aside>
+  </div>
+  <span id="patch-status" class="hint"></span>
 </section>
 <!-- ================= MODULATION ================= -->
 <section id="tab-modulation" class="tab-panel">
@@ -217,6 +242,8 @@
       <dd>Saved patterns (JSON in the data volume). Back up all 64 device slots, restore them, import or delete.</dd>
       <dt>Song</dt>
       <dd>Chain saved patterns with repeats and transpose. The Crave has no song memory, so playback runs from the app.</dd>
+      <dt>Patch Notebook</dt>
+      <dd>Save cable routes, panel-control positions, notes, and restore checklists for patches that cannot be stored in the Crave as SysEx. The seeded guided recipe links software setup to the relevant physical hardware steps.</dd>
       <dt>Modulation</dt>
       <dd>App-side LFOs sent as CC, pitch bend or channel pressure. <strong>→ ASSIGN</strong> routes a slot to the ASSIGN jack for patching.</dd>
       <dt>Live Keys</dt>

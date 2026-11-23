@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "recipe-crave-first-sequenced-note",
+  "name": "Crave — first sequenced note",
+  "device_kind": "crave",
+  "notes": "Start by making a simple, audible Crave sequence without patching. Only add external cables after the internal voice is confirmed. The Crave's own sequencer and app playback are two separate modes: use the device sequencer with MIDI clock, or stop it and play notes from this app.",
+  "cables": [],
+  "controls": [
+    {
+      "control": "Clock source",
+      "value": "USB/MIDI only when clocking the Crave's own sequencer"
+    },
+    {
+      "control": "MIDI channel",
+      "value": "Match the rear-panel DIP switches and Device Settings"
+    },
+    {
+      "control": "Master volume",
+      "value": "Low to start, then raise gradually"
+    },
+    {
+      "control": "VCO tune / range",
+      "value": "Set a comfortable in-tune note before recording steps"
+    },
+    {
+      "control": "Filter cutoff",
+      "value": "Open enough to hear the oscillator"
+    },
+    {
+      "control": "Filter resonance",
+      "value": "Start low to avoid harsh peaks"
+    },
+    {
+      "control": "Envelope sustain / release",
+      "value": "Set Sustain and Decay for a clear first note; adjust Release to taste"
+    }
+  ],
+  "pattern_ids": [],
+  "song_ids": [],
+  "checklist": [
+    {
+      "text": "Connect the Crave over USB and verify it appears in the Device bar",
+      "done": false
+    },
+    {
+      "text": "Set Master Volume low, open Filter Cutoff, and lower Resonance",
+      "done": false
+    },
+    {
+      "text": "Set the VCO tune/range and confirm that the analog voice is audible before sequencing",
+      "done": false
+    },
+    {
+      "text": "Set App MIDI channel to match the rear-panel DIP switches",
+      "done": false
+    },
+    {
+      "text": "For app playback, stop the Crave sequencer and press the app Play control",
+      "done": false
+    },
+    {
+      "text": "For Clock mode, set Clock Source to USB/MIDI and use the device clock transport",
+      "done": false
+    }
+  ],
+  "is_recipe": true,
+  "created": "2026-11-23T01:25:50.327617425+00:00",
+  "updated": "2026-11-23T01:25:50.327617425+00:00"
+}

@@ -1,0 +1,12 @@
+{
+  "accent_threshold": 100,
+  "assign_mode": 12,
+  "clock_edge": 0,
+  "clock_source": 2,
+  "clock_type": 2,
+  "midi_channel": 1,
+  "midi_clock_out": 0,
+  "pitch_bend_down": 2,
+  "pitch_bend_up": 2,
+  "seq_autoplay": 0
+}

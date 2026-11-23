@@ -158,13 +158,32 @@ footer { padding: 8px 16px; color: var(--muted); font-size: 11px; border-top: 1p
 .song-table tr.song-active td:first-child { color: var(--green); font-weight: 700; }
 .song-table td button { padding: 2px 8px; margin-right: 4px; }
 
+/* patch notebook */
+.patch-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.patch-toolbar select { min-width: 220px; }
+.patch-name-field { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-bottom: 12px; }
+.patch-name-field input { width: 280px; max-width: 100%; font-weight: 700; }
+
+.patch-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; }
+.patch-main, .patch-checklist { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.patch-field { display: flex; flex-direction: column; align-items: stretch; margin-bottom: 12px; }
+.patch-field textarea { resize: vertical; }
+.patch-section { margin-top: 12px; }
+.patch-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.patch-row { display: grid; grid-template-columns: minmax(100px, 1fr) 20px minmax(100px, 1fr) minmax(120px, 1fr) auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.patch-row.cable-row { grid-template-columns: minmax(150px, 1fr) 20px minmax(150px, 1fr) minmax(120px, 1fr) 32px; }
+.patch-row.cable-row button { width: 32px; padding: 3px 0; }
+.patch-row.control-row { grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) 32px; }
+.patch-row.control-row input[type="text"] { width: 100%; min-width: 0; }
+.patch-row.control-row button { width: 32px; padding: 3px 0; }
+.patch-checklist h3 { margin: 0 0 10px; color: var(--accent); font-size: 14px; }
+.patch-check { display: grid; grid-template-columns: auto 1fr auto; width: 100%; margin-bottom: 6px; }
+.patch-check input[type="text"] { min-width: 0; }
+@media (max-width: 800px) { .patch-layout { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .patch-row.control-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px; } }
+
 /* modulation */
-.mod-slots { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-.mod-slot { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; opacity: .65; }
-.mod-slot.enabled { opacity: 1; border-color: var(--accent); }
-.mod-slot-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
-.mod-slot-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; font-size: 12px; }
-.mod-slot-row label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
-.mod-slot-row input[type="range"] { width: 110px; }
-.mod-slot-row input[type="number"] { width: 74px; }
-.mod-slot-row span { min-width: 24px; color: var(--text); }
+
+.library-maintenance { margin: -4px 0 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.library-maintenance summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 8px 12px; }
+.library-maintenance-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 12px 12px; border-top: 1px solid var(--border); }

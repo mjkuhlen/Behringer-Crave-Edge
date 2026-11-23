@@ -10,6 +10,7 @@ use crate::clock::ClockTransport;
 use crate::library::{self, Library};
 use crate::midi::{Event, MidiManager};
 use crate::modulation::{self, ModConfig, ModEngine};
+use crate::patch::{Patch, PatchStore};
 use crate::player::{Player, SongEntry};
 use crate::song::{Song, SongStore};
 use anyhow::{anyhow, Result};
@@ -81,6 +82,7 @@ pub struct AppState {
     pub enumerator: Arc<MidiManager>,
     pub library: Arc<Library>,
     pub songs: Arc<SongStore>,
+    pub patches: Arc<PatchStore>,
     pub events: broadcast::Sender<Event>,
     pub data_dir: PathBuf,
 }
@@ -153,6 +155,8 @@ pub fn router(state: AppState, web_dir: &std::path::Path) -> Router {
         .route("/api/note", post(note))
         .route("/api/songs", get(list_songs).post(create_song))
         .route("/api/songs/:id", get(get_song).put(update_song).delete(delete_song))
+        .route("/api/patches", get(list_patches).post(create_patch))
+        .route("/api/patches/:id", get(get_patch).put(update_patch).delete(delete_patch))
         .route("/api/modulation", get(get_modulation).put(put_modulation))
         .route("/api/modulation/start", post(mod_start))
         .route("/api/modulation/stop", post(mod_stop))
@@ -702,9 +706,7 @@ fn default_true() -> bool {
     true
 }
 
-/// Wipe all 64 device slots to the factory-blank pattern.
-/// Safety: backs up every slot first and ABORTS before writing anything if
-/// any backup read fails; each write is verified by byte-exact readback.
+/// Wipe all 64 device slots
 async fn clear_all(State(s): State<AppState>, Json(req): Json<ClearAllReq>) -> ApiResult<Value> {
     if !req.confirm {
         return Err(anyhow!("clearing all device patterns requires confirm=true").into());
@@ -901,6 +903,40 @@ async fn d_note(State(s): State<AppState>, Path(id): Path<String>, Json(req): Js
     let d = s.ctx(&id)?;
     let sent = send_note(&d, &req)?;
     Ok(Json(json!({ "sent": sent })))
+}
+
+// ---------------------------------------------------------------------------
+// Patch notebook
+// ---------------------------------------------------------------------------
+
+async fn list_patches(State(s): State<AppState>) -> Json<Value> {
+    Json(json!({ "patches": s.patches.list() }))
+}
+
+async fn create_patch(State(s): State<AppState>, Json(mut patch): Json<Patch>) -> ApiResult<Patch> {
+    patch.normalize();
+    if patch.id.is_empty() { patch.id = s.patches.new_id(&patch.name); }
+    let now = chrono::Utc::now().to_rfc3339();
+    if patch.created.is_empty() { patch.created = now.clone(); }
+    patch.updated = now;
+    s.patches.save(&patch)?;
+    Ok(Json(patch))
+}
+
+async fn get_patch(State(s): State<AppState>, Path(id): Path<String>) -> ApiResult<Patch> {
+    let patch = s.patches.load(&id).ok_or_else(|| anyhow!("patch {} not found", id))?;
+    Ok(Json(patch))
+}
+
+async fn update_patch(State(s): State<AppState>, Path(id): Path<String>, Json(mut patch): Json<Patch>) -> ApiResult<Patch> {
+    if s.patches.load(&id).is_none() { return Err(anyhow!("patch {} not found", id).into()); }
+    patch.normalize(); patch.id = id; patch.updated = chrono::Utc::now().to_rfc3339();
+    s.patches.save(&patch)?; Ok(Json(patch))
+}
+
+async fn delete_patch(State(s): State<AppState>, Path(id): Path<String>) -> ApiResult<Value> {
+    let deleted = s.patches.delete(&id)?;
+    Ok(Json(json!({ "deleted": deleted })))
 }
 
 // ---------------------------------------------------------------------------

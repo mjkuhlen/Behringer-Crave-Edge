@@ -6,6 +6,31 @@ const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const BLACK_OFFSETS = new Set([1,3,6,8,10]);
 const KEYMAP = { a:0, w:1, s:2, e:3, d:4, f:5, t:6, g:7, y:8, h:9, u:10, j:11, k:12 };
 
+const CRAVE_OUTPUTS = [
+  "MULTIPLE 1", "MULTIPLE 2", "OSC PULSE", "OSC SAW", "ENV", "NOISE",
+  "VCA/LINE", "PHONES", "LFO TRI", "LFO SQU", "VC MIX", "ASSIGN",
+  "KB CV", "GATE", "VCF",
+];
+const CRAVE_INPUTS = [
+  "OSC CV", "OSC FM", "OSC MOD", "VCF CUTOFF", "VCF RES", "MIX 1",
+  "MIX 2", "VC MIX", "MULTIPLE", "MIX CV", "EXT AUDIO", "TEMPO",
+  "PLAY/STOP", "RESET", "HOLD", "ENV GATE", "VCA CV", "LFO RATE",
+];
+
+function patchSelect(options, value, placeholder, onChange) {
+  const select = document.createElement("select");
+  const empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.appendChild(empty);
+  for (const option of options) {
+    const o = document.createElement("option"); o.value = option; o.textContent = option; select.appendChild(o);
+  }
+  if (value && !options.includes(value)) {
+    const o = document.createElement("option"); o.value = value; o.textContent = value + " (saved)"; select.appendChild(o);
+  }
+  select.value = value || "";
+  select.addEventListener("change", () => onChange(select.value));
+  return select;
+}
+
 const S = {
   devices: [], connected: null, isSim: false, kind: "crave",
   deviceMap: {},          // id -> {id,name,kind,playing,mod_running,clock_running,settings}
@@ -13,6 +38,8 @@ const S = {
   settings: null, options: null,
   pattern: newPattern(), selStep: 0, playing: false, playhead: -1,
   octave: 2, liveVel: 100, pressed: new Set(),
+  patch: { schema_version: 1, id: "", name: "New Patch", device_kind: "crave", notes: "", cables: [], controls: [], pattern_ids: [], song_ids: [], checklist: [], is_recipe: false, created: "", updated: "" },
+  patches: [],
 };
 
 function newPattern() {
@@ -218,6 +245,7 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () =>
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.toggle("active", p.id === "tab-" + t.dataset.tab));
   if (t.dataset.tab === "library") refreshLibrary();
   if (t.dataset.tab === "song") { refreshSongs().catch(e => status(e.message, true)); renderSong(); }
+  if (t.dataset.tab === "patch") refreshPatches().catch(e => status(e.message, true));
   if (t.dataset.tab === "modulation") loadModulation().catch(e => status(e.message, true));
 }));
 function showTab(name) { document.querySelector(`.tab[data-tab="${name}"]`).click(); }
@@ -640,6 +668,65 @@ async function playSong() {
   } catch (e) { status(e.message, true); }
 }
 
+/* ---------------- patch notebook ---------------- */
+S.patch = { schema_version: 1, id: "", name: "New Patch", device_kind: "crave", notes: "", cables: [], controls: [], pattern_ids: [], song_ids: [], checklist: [], is_recipe: false, created: "", updated: "" };
+S.patches = [];
+
+function currentPatch() {
+  const p = JSON.parse(JSON.stringify(S.patch));
+  p.name = $("patch-name").value || "New Patch";
+  p.notes = $("patch-notes").value;
+  return p;
+}
+async function refreshPatches() {
+  const j = await api("/api/patches");
+  S.patches = j.patches;
+  const sel = $("patch-load"); const cur = sel.value;
+  sel.innerHTML = '<option value="">— load patch / recipe —</option>';
+  for (const p of S.patches) {
+    const o = document.createElement("option"); o.value = p.id; o.textContent = (p.is_recipe ? "Recipe: " : "") + p.name; sel.appendChild(o);
+  }
+  if (cur && S.patches.some(p => p.id === cur)) sel.value = cur;
+}
+function renderPatch() {
+  $("patch-name").value = S.patch.name;
+  $("patch-notes").value = S.patch.notes || "";
+  const cableWrap = $("patch-cables"); cableWrap.innerHTML = "";
+  S.patch.cables.forEach((c, i) => {
+    const row = document.createElement("div"); row.className = "patch-row cable-row";
+    const from = patchSelect(CRAVE_OUTPUTS, c.from || "", "— Crave output —", v => c.from = v);
+    const to = patchSelect(CRAVE_INPUTS, c.to || "", "— Crave input —", v => c.to = v);
+    const notes = document.createElement("input"); notes.placeholder = "Cable notes"; notes.value = c.notes || "";
+    notes.oninput = () => c.notes = notes.value;
+    const rm = document.createElement("button"); rm.textContent = "✕"; rm.onclick = () => { S.patch.cables.splice(i, 1); renderPatch(); };
+    row.append(from, document.createTextNode("→"), to, notes, rm); cableWrap.appendChild(row);
+  });
+  const controlWrap = $("patch-controls"); controlWrap.innerHTML = "";
+  S.patch.controls.forEach((c, i) => {
+    const row = document.createElement("div"); row.className = "patch-row control-row";
+    const control = document.createElement("input"); control.placeholder = "Control / switch"; control.value = c.control || "";
+    const value = document.createElement("input"); value.placeholder = "Position / range"; value.value = c.value || "";
+    control.oninput = () => c.control = control.value; value.oninput = () => c.value = value.value;
+    const rm = document.createElement("button"); rm.textContent = "✕"; rm.onclick = () => { S.patch.controls.splice(i, 1); renderPatch(); };
+    row.append(control, value, rm); controlWrap.appendChild(row);
+  });
+  const checklist = $("patch-checklist"); checklist.innerHTML = "";
+  S.patch.checklist.forEach((c, i) => {
+    const row = document.createElement("label"); row.className = "patch-check";
+    const box = document.createElement("input"); box.type = "checkbox"; box.checked = !!c.done;
+    box.onchange = () => c.done = box.checked;
+    const text = document.createElement("input"); text.value = c.text || ""; text.oninput = () => c.text = text.value;
+    const rm = document.createElement("button"); rm.textContent = "✕"; rm.onclick = () => { S.patch.checklist.splice(i, 1); renderPatch(); };
+    row.append(box, text, rm); checklist.appendChild(row);
+  });
+}
+async function savePatch() {
+  const p = currentPatch();
+  const j = p.id ? await api("/api/patches/" + p.id, "PUT", p) : await api("/api/patches", "POST", p);
+  S.patch = j; $("patch-status").textContent = "saved ✓";
+  await refreshPatches(); $("patch-load").value = j.id; status("patch saved: " + j.id);
+}
+
 /* ---------------- modulation engine ---------------- */
 S.mod = null;
 const MOD_SHAPES = ["sine", "triangle", "square", "saw", "random"];
@@ -821,7 +908,7 @@ function init() {
     const ok = await showModal({
       title: "Clear all device patterns",
       body: (backupFirst
-        ? "This will:\n1. Back up all 64 device slots to the library (aborts if any read fails)\n2. Reset every slot to the device default: one C3 note on step 1, the rest silent\n3. Verify each write by readback"
+        ? "This will:\n1. Back up all 64 device slots to the library (aborts if any read fails)\n2. Reset every slot to the device default: one C3 note on step 1, the rest silent\n3. Verify each write by readback afterwards"
         : "This will:\n1. Reset every slot to the device default: one C3 note on step 1, the rest silent\n2. Verify each write by readback\n\nNO BACKUP will be made — patterns are permanently lost unless you already have one.") +
         "\n\nUndo afterwards: Library tab → Restore all to device.",
       confirmWord: "CLEAR",
@@ -843,60 +930,7 @@ function init() {
       status(e.message, true);
     }
   });
-  // library
-  $("btn-lib-refresh").addEventListener("click", refreshLibrary);
-  $("btn-lib-backup").addEventListener("click", async () => {
-    if (!S.connected) { status("connect to the device first", true); return; }
-    if (S.isSim) { status("backup works on hardware; simulator has no real slots", true); return; }
-    const ok = await showModal({ title: "Backup all device slots", body: "Read all 64 device slots into the library (read-only, ~30s)?", okLabel: "Start backup" });
-    if (!ok) { status("backup cancelled"); return; }
-    status("backing up all 64 device slots…");
-    try {
-      const j = await api("/api/backup-all", "POST", {});
-      status(`device backup: ${j.saved}/64 slots saved` + (j.failed.length ? `, ${j.failed.length} FAILED` : ""));
-      refreshLibrary();
-    } catch (e) { status(e.message, true); }
-  });
-  $("btn-lib-restore").addEventListener("click", async () => {
-    if (!S.connected) { status("connect to the device first", true); return; }
-    if (S.isSim) { status("restore-all is for hardware", true); return; }
-    const ok = await showModal({
-      title: "Restore all backups to device",
-      body: "Write all 64 library device-backups (Crave B1 P1 … B8 P8) back to their device slots?\n\nThis OVERWRITES the current device contents with the backups. Each write is verified by readback. Slots without a backup entry are skipped and reported.",
-      confirmWord: "RESTORE",
-      okLabel: "Restore device",
-      danger: true,
-    });
-    if (!ok) { status("restore-all cancelled"); return; }
-    status("restore-all running — progress in MIDI Monitor");
-    try {
-      const j = await api("/api/restore-all", "POST", { confirm: true });
-      const msg = `restore-all: ${j.restored}/64 restored` +
-        (j.missing.length ? `, ${j.missing.length} missing backups` : "") +
-        (j.failed.length ? `, ${j.failed.length} FAILED` : " ✓");
-      status(msg, j.failed.length > 0);
-    } catch (e) { status(e.message, true); }
-  });
-  $("btn-lib-import").addEventListener("click", () => $("lib-import-file").click());
-  $("btn-lib-delete-all").addEventListener("click", async () => {
-    let n = 0;
-    try { n = (await api("/api/patterns")).patterns.length; } catch (e) { status(e.message, true); return; }
-    if (n === 0) { status("library is already empty"); return; }
-    const ok = await showModal({
-      title: "Delete entire library",
-      body: `Delete ALL ${n} patterns from the library?\n\nThis includes device backups (re-creatable with "Backup all 64 slots") and your saved work. This cannot be undone.`,
-      confirmWord: "DELETE",
-      okLabel: "Delete all",
-      danger: true,
-    });
-    if (!ok) { status("delete-all cancelled"); return; }
-    try {
-      const j = await api("/api/patterns/delete-all", "POST", { confirm: true });
-      status(`library: ${j.deleted} patterns deleted`);
-      refreshLibrary();
-    } catch (e) { status(e.message, true); }
-  });
-  $("lib-import-file").addEventListener("change", (e) => { if (e.target.files[0]) importPattern(e.target.files[0]); e.target.value = ""; });
+  // library maintenance actions intentionally live elsewhere in the UI
   // live
   $("oct-down").addEventListener("click", () => { S.octave = clamp(S.octave - 1, 0, 7); renderLiveKeys(); renderMiniKeys(); });
   $("oct-up").addEventListener("click", () => { S.octave = clamp(S.octave + 1, 0, 7); renderLiveKeys(); renderMiniKeys(); });
@@ -939,6 +973,24 @@ function init() {
       status("song deleted");
     } catch (e) { status(e.message, true); }
   });
+  // patch notebook
+  $("btn-patch-save").addEventListener("click", () => savePatch().catch(e => status(e.message, true)));
+  $("btn-patch-new").addEventListener("click", () => {
+    S.patch = { schema_version: 1, id: "", name: "New Patch", device_kind: "crave", notes: "", cables: [], controls: [], pattern_ids: [], song_ids: [], checklist: [], is_recipe: false, created: "", updated: "" }; renderPatch(); $("patch-load").value = "";
+  });
+  $("btn-patch-delete").addEventListener("click", async () => {
+    if (!S.patch.id) { status("patch is not saved yet", true); return; }
+    const ok = await showModal({ title: "Delete patch", body: `Delete patch "${S.patch.name}"?`, okLabel: "Delete", danger: true }); if (!ok) return;
+    await api("/api/patches/" + S.patch.id, "DELETE");
+    $("btn-patch-new").click(); await refreshPatches(); status("patch deleted");
+  });
+  $("patch-load").addEventListener("change", async () => {
+    const id = $("patch-load").value; if (!id) return;
+    S.patch = await api("/api/patches/" + id); renderPatch(); $("patch-status").textContent = S.patch.is_recipe ? "guided recipe" : "saved patch";
+  });
+  $("btn-patch-add-cable").addEventListener("click", () => { S.patch.cables.push({ from: "", to: "", color: "", notes: "" }); renderPatch(); });
+  $("btn-patch-add-control").addEventListener("click", () => { S.patch.controls.push({ control: "", value: "" }); renderPatch(); });
+  $("btn-patch-add-check").addEventListener("click", () => { S.patch.checklist.push({ text: "", done: false }); renderPatch(); });
   // modulation
   $("btn-mod-start").addEventListener("click", async () => {
     if (!S.connected) { status("connect to the device first", true); return; }
@@ -954,6 +1006,38 @@ function init() {
     catch (e) { status(e.message, true); }
   });
   $("mod-tempo").addEventListener("change", applyMod);
+
+  // library
+  $("btn-lib-refresh").addEventListener("click", refreshLibrary);
+  $("btn-lib-backup").addEventListener("click", async () => {
+    if (!S.connected) { status("connect to the device first", true); return; }
+    if (S.isSim) { status("backup works on hardware; simulator has no real slots", true); return; }
+    const ok = await showModal({ title: "Backup all device slots", body: "Read all 64 device slots into the library (read-only, ~30s)?", okLabel: "Start backup" });
+    if (!ok) return;
+    status("backing up all 64 device slots…");
+    try { const j = await api("/api/backup-all", "POST", {}); status(`device backup: ${j.saved}/64 slots saved` + (j.failed.length ? `, ${j.failed.length} FAILED` : "")); refreshLibrary(); }
+    catch (e) { status(e.message, true); }
+  });
+  $("btn-lib-restore").addEventListener("click", async () => {
+    if (!S.connected) { status("connect to the device first", true); return; }
+    if (S.isSim) { status("restore-all is for hardware", true); return; }
+    const ok = await showModal({ title: "Restore all backups to device", body: "Write all 64 library device-backups back to their device slots?\n\nThis OVERWRITES the current device contents. Each write is verified by readback.", confirmWord: "RESTORE", okLabel: "Restore device", danger: true });
+    if (!ok) return;
+    status("restore-all running — progress in MIDI Monitor");
+    try { const j = await api("/api/restore-all", "POST", { confirm: true }); status(`restore-all: ${j.restored}/64 restored` + (j.failed.length ? `, ${j.failed.length} FAILED` : " ✓")); }
+    catch (e) { status(e.message, true); }
+  });
+  $("btn-lib-import").addEventListener("click", () => $("lib-import-file").click());
+  $("lib-import-file").addEventListener("change", (e) => { if (e.target.files[0]) importPattern(e.target.files[0]); e.target.value = ""; });
+  $("btn-lib-delete-all").addEventListener("click", async () => {
+    let n = 0;
+    try { n = (await api("/api/patterns")).patterns.length; } catch (e) { status(e.message, true); return; }
+    if (n === 0) { status("library is already empty"); return; }
+    const ok = await showModal({ title: "Delete entire library", body: `Delete ALL ${n} patterns from the library? This cannot be undone.`, confirmWord: "DELETE", okLabel: "Delete all", danger: true });
+    if (!ok) return;
+    try { const j = await api("/api/patterns/delete-all", "POST", { confirm: true }); status(`library: ${j.deleted} patterns deleted`); refreshLibrary(); }
+    catch (e) { status(e.message, true); }
+  });
 
   syncPatternControls();
   selectStep(0);
